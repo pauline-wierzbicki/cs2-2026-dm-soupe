@@ -114,7 +114,7 @@ En se servant du cours de Calcul scientifique 1, nous trouvons deux discrétisat
 
 \begin{equation}
 \label{discretisation:explicite}
-  U^{n+1} = (Id + \frac{\alpha . \Delta t}{(\Delta x)^2} A)U^n
+  U^{n+1} = (Id + \frac{\alpha \Delta t}{(\Delta x)^2} A)U^n
   \tag{$D_{\text{exp}}$}
 \end{equation}
 
@@ -122,16 +122,25 @@ et
 
 \begin{equation}
 \label{discretisation:implicite}
-  (Id - \frac{\alpha . \Delta t}{(\Delta x)^2} A)U^{n+1} = U^n
+  (Id - \frac{\alpha \Delta t}{(\Delta x)^2} A)U^{n+1} = U^n
   \tag{$D_{\text{imp}}$}
 \end{equation}
 
-Dans ces discrétisations, $\text{Id}$ désigne la matrice identité,
-$\alpha$ le coefficient de diffusivité thermique, $\Delta t$ le pas de temps,
-et $\Delta x$ le pas d'espace
+Soit $N$ le nombre d'intervalles de notre maillage en espace, avec le pas $\Delta x = \frac{b-a}{N}$. 
+Notons $u_i^n \approx u(x_i, t_n)$ l'approximation de la température au nœud d'espace $x_i = a + i\Delta x$ et au temps $t_n = n\Delta t$.
 
-A est la matrice tridiagonale de forme :
+Le vecteur des températures intérieures $U^n$ de taille $N-1$ s'écrit :
+$$
+U^n =
+\begin{pmatrix}
+u_1^n \\
+u_2^n \\
+\vdots \\
+u_{N-1}^n
+\end{pmatrix}
+$$
 
+La matrice $A$ de taille $(N-1) \times (N-1)$ est la matrice tridiagonale associée aux points intérieurs :
 $$
 A = 
 \begin{pmatrix}
@@ -143,60 +152,79 @@ A =
 \end{pmatrix}
 $$
 
-$U^n$ est le vecteur solution au temps n :
+Les conditions aux limites de Dirichlet ($u_0^n = T_{\text{soupe}}$ et $u_N^n = T_{\text{ambiante}}$) sont quant à elles injectées directement dans le second membre des schémas.
 
-$$
-U^n =
-\begin{pmatrix}
-u(a,n) \\
-u(1,n) \\
-u(2,n) \\
-\vdots \\
-u(b,n)
-\end{pmatrix}
-\quad \text{et} \quad
-U^0 = 
-\begin{pmatrix}
-u(a,0) = u_{\text{init}}(a) \\
-u_{\text{init}}(1) \\
-u_{\text{init}}(2) \\
-\vdots \\
-u_{\text{init}}(b)
-\end{pmatrix}
-$$
+Précisons qu'ici, les exposants sur $U$ indiquent l'indice du temps, et non une puissance.
 
-Précisons qu'ici, les exposants sur $U$ indiquent l'indice du temps, et pas une puissance.
-Par conséquent, $U^n$ représente le vecteur solution au temps n.
-Aussi, les solutions sont des approximations.
-
-Par le cours de Calcul scientifique 1, on apprend aussi la condition de stabilité pour l'équation explicite
-est $0 \le \Delta t \le \frac{(\Delta x)^2}{2 \alpha}$
+Par le cours de Calcul scientifique 1, on rappelle que la condition de stabilité pour le schéma explicite est :
+$$0 \le \Delta t \le \frac{(\Delta x)^2}{2 \alpha}$$
 
 \subsection{Modélisation}
 
-La modélisation métal est la suivante :
+Nous utiliserons deux modélisations différentes, une pour simuler la cuillère en métal
+et l'autre pour simuler la cuillère en bois.
+
+Le métal le plus fréquemment utilisé pour les couverts est l'inox 304, faisant partie 
+de la famille des aciers inoxydables austénitiques.
+Pour ce qui est du bois, j'ai pris comme référence le bois de bouleau.
+
+Commençons par calculer les coefficients $\alpha$ :
+
+$$
+\alpha = \frac{\lambda}{\rho . c}
+$$
+
+Avec $\lambda$ la conductivité thermique du materiau, $\rho$ sa densité
+et $c$ sa capacité thermique massique.
+
+\vspace{8mm}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Propriétés thermophysiques de l'inox et du bois à température ambiante.}
+  \label{tab:proprietes_thermiques}
+  \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Matériau} & \textbf{Masse volumique $\rho$} & \textbf{Conductivité $k$} & \textbf{Capacité massique $c$} & \textbf{Diffusivité $\alpha$} \\
+     & ($\text{kg}/\text{m}^3$) & ($\text{W}\cdot\text{m}^{-1}\cdot\text{K}^{-1}$) & ($\text{J}\cdot\text{kg}^{-1}\cdot\text{K}^{-1}$) & ($\text{m}^2/\text{s}$) \\
+    \hline
+    Inox & $7\,900$ & $15$ & $500$ & $\approx 3,80 \times 10^{-6}$ \\
+    \hline
+    Bois (sec) & $500$ & $0,14$ & $1\,236$ & $\approx 2,27 \times 10^{-7}$ \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\vspace{10mm}
+
+Remarquons que $\alpha_{\text{bois}} < \alpha_{\text{métal}}$, ce qui nous donne une intuition
+quant au fait que la cuillère en bois est moins chaude que la cuillère en métal une fois immergée dans la soupe.
+
+\paragraph{Modélisation pour le métal}
 
 \begin{equation}
 \label{eq:chaleur-metal}
 \begin{cases}
-  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  \frac{\partial u}{\partial t} (x,t) = \alpha_{\text{métal}} \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
   u(x,0) = 21, & x \in [a,b] \\
   u(a,t) = 80, & t \in [0,T] \\
   u(b,t) = 21, & t \in [0,T]
 \end{cases}
 \end{equation}
 
-Et pour la modélisation bois :
+\paragraph{Modélisation pour le bois}
 
 \begin{equation}
 \label{eq:chaleur-bois}
 \begin{cases}
-  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  \frac{\partial u}{\partial t} (x,t) = \alpha_{\text{bois}} \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
   u(x,0) = 21, & x \in [a,b] \\
   u(a,t) = 80, & t \in [0,T] \\
   u(b,t) = 21, & t \in [0,T]
 \end{cases}
 \end{equation}
+
+Les choix de conditions aux limites et initiale expliqués à la section \ref{sec:formulation_mathematique} ont été appliqués.
 
 \section{Implémentation Python}
 \label{sec:implementation_python}
