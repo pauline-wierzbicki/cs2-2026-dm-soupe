@@ -1,0 +1,266 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{tex/csmi}
+\usepackage{hyperref}
+
+\input{tex/listing.style}
+\input{tex/algorithm.style}
+
+\lstdefinestyle{mycppstyleInTabular}{
+  style=mycppstyle,numbers=none,basicstyle=\footnotesize\ttfamily,
+  xleftmargin=0pt,mathescape=true
+}
+\newtcblisting{mycpplistingInTabular}[2][]{
+  enhanced,sharp corners,listing only,
+  colback=CSMILight,colframe=CSMIRule,boxrule=0.4pt,
+  colbacktitle=CSMINavy,coltitle=white,fonttitle=\small\sffamily\bfseries,
+  left=7pt,right=7pt,top=6pt,bottom=6pt,
+  listing style=mycppstyleInTabular,title={#2},#1
+}
+
+\renewcommand{\paragraph}[1]{%
+  \par\addvspace{2.5ex plus 1ex minus .2ex}%
+  {\normalfont\normalsize\bfseries #1}\par
+  \addvspace{1.3ex plus .2ex}%
+}
+\renewcommand{\CSMIdoctype}{RAPPORT DU DEVOIR MAISON}
+\renewcommand{\CSMIshorttitle}{Sujet 3 / Rapport}
+\renewcommand{\CSMIsubtitle}{Calcul scientifique 2}
+\renewcommand{\CSMIcovernote}{ Pourquoi la cuillère en métal devient-elle chaude au manche dans la soupe, alors que la cuillère en bois ne le devient pas ? Étude sous l'angle de la modélisation et de la résolution numérique.}
+\newcommand{\dollar}{\mbox{\textdollar}}
+\renewcommand{\familydefault}{\sfdefault}
+
+\title{Diffusion de la chaleur dans le manche d'une cuillère}
+\author{Pauline Wierzbicki / M1 CSMI}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\clearpage
+
+\section{Introduction}
+\label{sec:introduction}
+% Présentation du sujet, de la problématique et des objectifs.
+\subsection{Mise en situation}
+Ce devoir maison trouve sa motivation dans une observation quotidienne : 
+lorsque l'on plonge une cuillère dans une soupe chaude, sa température varie selon le matériau qui la compose.
+Avec une cuillère en métal, la chaleur de la soupe se propage rapidement le long du manche, le rendant brûlant au toucher.
+À l'inverse, une cuillère en bois reste tempérée à l'extrémité.
+
+Dès lors, comment expliquer physiquement cette différence de comportement ?
+C'est tout l'objet de ce travail, qui vise à modéliser et quantifier ce transfert thermique par une implémentation en Python.
+
+\subsection{Objectifs}
+Les objectifs de ce devoir maison sont :
+
+\begin{itemize}
+  \item Modéliser le problème de la cuillère par l'équation de la chaleur en une dimension d'espace et de temps
+  \item Implémenter cette modélisation en Python, en utilisant un stockage creux de matrices
+  \item Utiliser plusieurs méthodes de résolution (directes, itératives) et vérifier la convergence des méthodes itératives
+  \item Afficher des résultats sous forme graphique et les expliquer
+  \item Comparer les résultats obtenus en modélisant une cuillère en métal, et une cuillère en bois
+\end{itemize}
+
+\section{Formulation du problème}
+\label{sec:formulation_mathematique}
+% Équation de la chaleur 1D, paramètres physiques (diffusivité du métal et du bois), conditions initiales et aux limites.
+Dans cette section nous allons rapidement donner la forme de l'équation de la chaleur ainsi que sa discrétisation.
+Ces résultats sont issus du cours de Calcul Scientifique 1 du M1S1 CSMI.
+
+L'équation de la chaleur en une dimension d'espace et une dimension de temps est de la forme :
+
+\begin{equation}
+  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t)
+  \label{eq:diffusion}
+\end{equation}
+Avec $ x \in [a,b] \subset \mathbb{R} $ et $ t \in [0,T] \subset R^+ $
+
+Le choix de la 1D en espace s'explique par le fait que le manche d'une cuillère peut être apparenté à une barre,
+et donc à un problème en une dimension d'espace.
+
+Pour compléter l'équation (\ref{eq:diffusion}), nous devons spécifier une condition initale ainsi que des conditions aux limites.
+Nous utiliserons une condition initiale constante, en partant du principe que le manche de la cuillère, 
+au moment d'être immergé dans la soupe, est à température ambiante (disons 21°C).
+
+Pour ce qui est des conditions aux limites, nous utiliserons celles de Dirichlet, qui consistent à fixer une température
+constante à chaque bords. 
+Le bout du manche immergé aura une température égale à celle de la soupe (disons 80°C), 
+et le bout exposé à l'air aura la même température que la condition initiale tout du long (21°C pour la température ambiante).
+
+Le choix de conditions aux limites de Dirichlet est un peu simpliste.
+En effet, elles ne représentent pas completement la réalité, car les vapeurs chaudes émanées par la soupe chauffent indirectement le manche.
+Nous ne nous intéresserons uniquement au phénomène de diffusion dans le manche par le contact d'une source chaude (ici la soupe), qui 
+ne refroidit pas dans le temps.
+
+Finalement, nous nous retrouvons avec ce problème :
+
+\begin{equation}
+\label{eq:chaleur-generale}
+\begin{cases}
+  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  u(x,0) = u_{\text{init}}(x), & x \in [a,b] \\
+  u(a,t) = T_{\text{soupe}}, & t \in [0,T] \\
+  u(b,t) = T_{\text{ambiante}}, & t \in [0,T]
+\end{cases}
+\end{equation}
+
+Les valeurs de $u_{\text{init}}(x)$, $T_{\text{soupe}}$ et $T_{\text{ambiante}}$ seront spécifiées lors de la modélisation.
+
+\subsection{Discrétisation}
+
+En se servant du cours de Calcul scientifique 1, nous trouvons deux discrétisations sous forme matricielle :
+
+\begin{equation}
+\label{discretisation:explicite}
+  U^{n+1} = (Id + \frac{\alpha \Delta t}{(\Delta x)^2} A)U^n
+  \tag{$D_{\text{exp}}$}
+\end{equation}
+
+et 
+
+\begin{equation}
+\label{discretisation:implicite}
+  (Id - \frac{\alpha \Delta t}{(\Delta x)^2} A)U^{n+1} = U^n
+  \tag{$D_{\text{imp}}$}
+\end{equation}
+
+Soit $N$ le nombre d'intervalles de notre maillage en espace, avec le pas $\Delta x = \frac{b-a}{N}$. 
+Notons $u_i^n \approx u(x_i, t_n)$ l'approximation de la température au nœud d'espace $x_i = a + i\Delta x$ et au temps $t_n = n\Delta t$.
+
+Le vecteur des températures intérieures $U^n$ de taille $N-1$ s'écrit :
+$$
+U^n =
+\begin{pmatrix}
+u_1^n \\
+u_2^n \\
+\vdots \\
+u_{N-1}^n
+\end{pmatrix}
+$$
+
+La matrice $A$ de taille $(N-1) \times (N-1)$ est la matrice tridiagonale associée aux points intérieurs :
+$$
+A = 
+\begin{pmatrix}
+-2 & 1  & 0  & \cdots & 0 \\
+1  & -2 & 1  & \ddots & \vdots \\
+0  & 1  & -2 & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & 1 \\
+0  & \cdots & 0 & 1 & -2
+\end{pmatrix}
+$$
+
+Les conditions aux limites de Dirichlet ($u_0^n = T_{\text{soupe}}$ et $u_N^n = T_{\text{ambiante}}$) sont quant à elles injectées directement dans le second membre des schémas.
+
+Précisons qu'ici, les exposants sur $U$ indiquent l'indice du temps, et non une puissance.
+
+Par le cours de Calcul scientifique 1, on rappelle que la condition de stabilité pour le schéma explicite est :
+$$0 \le \Delta t \le \frac{(\Delta x)^2}{2 \alpha}$$
+
+\subsection{Modélisation}
+
+Nous utiliserons deux modélisations différentes, une pour simuler la cuillère en métal
+et l'autre pour simuler la cuillère en bois.
+
+Le métal le plus fréquemment utilisé pour les couverts est l'inox 304, faisant partie 
+de la famille des aciers inoxydables austénitiques.
+Pour ce qui est du bois, j'ai pris comme référence le bois de bouleau.
+
+Commençons par calculer les coefficients $\alpha$ :
+
+$$
+\alpha = \frac{\lambda}{\rho . c}
+$$
+
+Avec $\lambda$ la conductivité thermique du materiau, $\rho$ sa densité
+et $c$ sa capacité thermique massique.
+
+\vspace{8mm}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Propriétés thermophysiques de l'inox et du bois à température ambiante.}
+  \label{tab:proprietes_thermiques}
+  \begin{tabular}{|l|c|c|c|c|}
+    \hline
+    \textbf{Matériau} & \textbf{Masse volumique $\rho$} & \textbf{Conductivité $k$} & \textbf{Capacité massique $c$} & \textbf{Diffusivité $\alpha$} \\
+     & ($\text{kg}/\text{m}^3$) & ($\text{W}\cdot\text{m}^{-1}\cdot\text{K}^{-1}$) & ($\text{J}\cdot\text{kg}^{-1}\cdot\text{K}^{-1}$) & ($\text{m}^2/\text{s}$) \\
+    \hline
+    Inox & $7\,900$ & $15$ & $500$ & $\approx 3,80 \times 10^{-6}$ \\
+    \hline
+    Bois (sec) & $500$ & $0,14$ & $1\,236$ & $\approx 2,27 \times 10^{-7}$ \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\vspace{10mm}
+
+Remarquons que $\alpha_{\text{bois}} < \alpha_{\text{métal}}$, ce qui nous donne une intuition
+quant au fait que la cuillère en bois est moins chaude que la cuillère en métal une fois immergée dans la soupe.
+
+\paragraph{Modélisation pour le métal}
+
+\begin{equation}
+\label{eq:chaleur-metal}
+\begin{cases}
+  \frac{\partial u}{\partial t} (x,t) = \alpha_{\text{métal}} \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  u(x,0) = 21, & x \in [a,b] \\
+  u(a,t) = 80, & t \in [0,T] \\
+  u(b,t) = 21, & t \in [0,T]
+\end{cases}
+\end{equation}
+
+\paragraph{Modélisation pour le bois}
+
+\begin{equation}
+\label{eq:chaleur-bois}
+\begin{cases}
+  \frac{\partial u}{\partial t} (x,t) = \alpha_{\text{bois}} \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  u(x,0) = 21, & x \in [a,b] \\
+  u(a,t) = 80, & t \in [0,T] \\
+  u(b,t) = 21, & t \in [0,T]
+\end{cases}
+\end{equation}
+
+Les choix de conditions aux limites et initiale expliqués à la section \ref{sec:formulation_mathematique} ont été appliqués.
+
+\section{Implémentation Python}
+\label{sec:implementation_python}
+% Discrétisation, schémas explicite/implicite, stockage CSR, solveurs (LU, Jacobi, Gauss-Seidel).
+
+\section{Résultats numériques}
+\label{sec:resultats_numeriques}
+% Profils de température, comparaison des performances des solveurs, analyse de sensibilité.
+
+\section{Reproductibilité}
+% Commandes de reproduction, endroit où retrouver le code source, dépendances Python
+Le code source pour la résolution numérique est disponible dans \href{https://github.com/pauline-wierzbicki/cs2-2026-dm-soupe}{ce dépôt GitHub}. \\
+Le code source de ce rapport, en \LaTeX, s'y trouve également.
+
+\section{Déclaration d'assistance par IA}
+Dans le cadre de ce devoir, je déclare avoir eu recours à une assistance par IA
+pour reformuler certains passages dans un registre plus formel.
+
+J'ai également utilisé ces outils pour identifier des sources documentaires
+sur la diffusivité des matériaux, afin d'obtenir une modélisation
+aussi fidèle que possible au comportement réel.
+
+\section{Conclusion}
+\label{sec:conclusion}
+% Bilan, limites et perspectives.
+
+\section{Bibliographie}
+\label{sec:bibliographie}
+
+\begin{itemize}
+  \item Page Wikipédia de l'acier inoxydable : \href{https://fr.wikipedia.org/wiki/Acier_inoxydable}{wikipedia.org}
+  \item Propriétés physiques du bois : \href{https://materiautheque.fr/materiaux/proprietes-du-bois/}{materiautheque.fr}
+  \item Conductivité thermique $\lambda$ du bois de bouleau : \href{https://www.engineeringtoolbox.com/thermal-conductivity-d_429.html}{engineeringtoolbox.com}
+  \item Page Wikipédia de la capacité thermique massique $c$ : \href{https://fr.wikipedia.org/wiki/Capacit%C3%A9_thermique_massique}{wikipedia.org}
+  \item Page Wikipédia de la diffusivité thermique : \href{https://fr.wikipedia.org/wiki/Diffusivit%C3%A9_thermique}{wikipedia.org}
+  \item Cours de Calcul scientifique 1 de M1S1 CSMI (Victor Michel-Dansac)
+\end{itemize}
+
+\end{document}
