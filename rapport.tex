@@ -1,5 +1,6 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage{tex/csmi}
+\usepackage{hyperref}
 
 \input{tex/listing.style}
 \input{tex/algorithm.style}
@@ -63,15 +64,146 @@ Les objectifs de ce devoir maison sont :
 \end{itemize}
 
 \section{Formulation du problème}
-\label{sec:mathematical_formulation}
+\label{sec:formulation_mathematique}
 % Équation de la chaleur 1D, paramètres physiques (diffusivité du métal et du bois), conditions initiales et aux limites.
+Dans cette section nous allons rapidement donner la forme de l'équation de la chaleur ainsi que sa discrétisation.
+Ces résultats sont issus du cours de Calcul Scientifique 1 du M1S1 CSMI.
+
+L'équation de la chaleur en une dimension d'espace et une dimension de temps est de la forme :
+
+\begin{equation}
+  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t)
+  \label{eq:diffusion}
+\end{equation}
+Avec $ x \in [a,b] \subset \mathbb{R} $ et $ t \in [0,T] \subset R^+ $
+
+Le choix de la 1D en espace s'explique par le fait que le manche d'une cuillère peut être apparenté à une barre,
+et donc à un problème en une dimension d'espace.
+
+Pour compléter l'équation (\ref{eq:diffusion}), nous devons spécifier une condition initale ainsi que des conditions aux limites.
+Nous utiliserons une condition initiale constante, en partant du principe que le manche de la cuillère, 
+au moment d'être immergé dans la soupe, est à température ambiante (disons 21°C).
+
+Pour ce qui est des conditions aux limites, nous utiliserons celles de Dirichlet, qui consistent à fixer une température
+constante à chaque bords. 
+Le bout du manche immergé aura une température égale à celle de la soupe (disons 80°C), 
+et le bout exposé à l'air aura la même température que la condition initiale tout du long (21°C pour la température ambiante).
+
+Le choix de conditions aux limites de Dirichlet est un peu simpliste.
+En effet, elles ne représentent pas completement la réalité, car les vapeurs chaudes émanées par la soupe chauffent indirectement le manche.
+Nous ne nous intéresserons uniquement au phénomène de diffusion dans le manche par le contact d'une source chaude (ici la soupe), qui 
+ne refroidit pas dans le temps.
+
+Finalement, nous nous retrouvons avec ce problème :
+
+\begin{equation}
+\label{eq:chaleur-generale}
+\begin{cases}
+  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  u(x,0) = u_{\text{init}}(x), & x \in [a,b] \\
+  u(a,t) = T_{\text{soupe}}, & t \in [0,T] \\
+  u(b,t) = T_{\text{ambiante}}, & t \in [0,T]
+\end{cases}
+\end{equation}
+
+Les valeurs de $u_{\text{init}}(x)$, $T_{\text{soupe}}$ et $T_{\text{ambiante}}$ seront spécifiées lors de la modélisation.
+
+\subsection{Discrétisation}
+
+En se servant du cours de Calcul scientifique 1, nous trouvons deux discrétisations sous forme matricielle :
+
+\begin{equation}
+\label{discretisation:explicite}
+  U^{n+1} = (Id + \frac{\alpha . \Delta t}{(\Delta x)^2} A)U^n
+  \tag{$D_{\text{exp}}$}
+\end{equation}
+
+et 
+
+\begin{equation}
+\label{discretisation:implicite}
+  (Id - \frac{\alpha . \Delta t}{(\Delta x)^2} A)U^{n+1} = U^n
+  \tag{$D_{\text{imp}}$}
+\end{equation}
+
+Dans ces discrétisations, $\text{Id}$ désigne la matrice identité,
+$\alpha$ le coefficient de diffusivité thermique, $\Delta t$ le pas de temps,
+et $\Delta x$ le pas d'espace
+
+A est la matrice tridiagonale de forme :
+
+$$
+A = 
+\begin{pmatrix}
+-2 & 1  & 0  & \cdots & 0 \\
+1  & -2 & 1  & \ddots & \vdots \\
+0  & 1  & -2 & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & 1 \\
+0  & \cdots & 0 & 1 & -2
+\end{pmatrix}
+$$
+
+$U^n$ est le vecteur solution au temps n :
+
+$$
+U^n =
+\begin{pmatrix}
+u(a,n) \\
+u(1,n) \\
+u(2,n) \\
+\vdots \\
+u(b,n)
+\end{pmatrix}
+\quad \text{et} \quad
+U^0 = 
+\begin{pmatrix}
+u(a,0) = u_{\text{init}}(a) \\
+u_{\text{init}}(1) \\
+u_{\text{init}}(2) \\
+\vdots \\
+u_{\text{init}}(b)
+\end{pmatrix}
+$$
+
+Précisons qu'ici, les exposants sur $U$ indiquent l'indice du temps, et pas une puissance.
+Par conséquent, $U^n$ représente le vecteur solution au temps n.
+Aussi, les solutions sont des approximations.
+
+Par le cours de Calcul scientifique 1, on apprend aussi la condition de stabilité pour l'équation explicite
+est $0 \le \Delta t \le \frac{(\Delta x)^2}{2 \alpha}$
+
+\subsection{Modélisation}
+
+La modélisation métal est la suivante :
+
+\begin{equation}
+\label{eq:chaleur-metal}
+\begin{cases}
+  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  u(x,0) = 21, & x \in [a,b] \\
+  u(a,t) = 80, & t \in [0,T] \\
+  u(b,t) = 21, & t \in [0,T]
+\end{cases}
+\end{equation}
+
+Et pour la modélisation bois :
+
+\begin{equation}
+\label{eq:chaleur-bois}
+\begin{cases}
+  \frac{\partial u}{\partial t} (x,t) = \alpha \frac{\partial^2 u}{\partial x^2} (x,t), & x \in [a,b],\; t \in [0,T] \\
+  u(x,0) = 21, & x \in [a,b] \\
+  u(a,t) = 80, & t \in [0,T] \\
+  u(b,t) = 21, & t \in [0,T]
+\end{cases}
+\end{equation}
 
 \section{Implémentation Python}
-\label{sec:cpp_implementation}
+\label{sec:implementation_python}
 % Discrétisation, schémas explicite/implicite, stockage CSR, solveurs (LU, Jacobi, Gauss-Seidel).
 
 \section{Résultats numériques}
-\label{sec:numerical_results}
+\label{sec:resultats_numeriques}
 % Profils de température, comparaison des performances des solveurs, analyse de sensibilité.
 
 \section{Reproductibilité}
@@ -80,6 +212,7 @@ Les objectifs de ce devoir maison sont :
 \section{Déclaration d'assistance par IA}
 Dans le cadre de ce devoir, je déclare avoir eu recours à une assistance par IA
 pour reformuler certains passages dans un registre plus formel.
+
 J'ai également utilisé ces outils pour identifier des sources documentaires
 sur la diffusivité des matériaux, afin d'obtenir une modélisation
 aussi fidèle que possible au comportement réel.
@@ -87,5 +220,17 @@ aussi fidèle que possible au comportement réel.
 \section{Conclusion}
 \label{sec:conclusion}
 % Bilan, limites et perspectives.
+
+\section{Bibliographie}
+\label{sec:bibliographie}
+
+\begin{itemize}
+  \item Page Wikipédia de l'acier inoxydable : \href{https://fr.wikipedia.org/wiki/Acier_inoxydable}{wikipedia.org}
+  \item Propriétés physiques du bois : \href{https://materiautheque.fr/materiaux/proprietes-du-bois/}{materiautheque.fr}
+  \item Conductivité thermique $\lambda$ du bois de bouleau : \href{https://www.engineeringtoolbox.com/thermal-conductivity-d_429.html}{engineeringtoolbox.com}
+  \item Page Wikipédia de la capacité thermique massique $c$ : \href{https://fr.wikipedia.org/wiki/Capacit%C3%A9_thermique_massique}{wikipedia.org}
+  \item Page Wikipédia de la diffusivité thermique : \href{https://fr.wikipedia.org/wiki/Diffusivit%C3%A9_thermique}{wikipedia.org}
+  \item Cours de Calcul scientifique 1 de M1S1 CSMI (Victor Michel-Dansac)
+\end{itemize}
 
 \end{document}
