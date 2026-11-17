@@ -1,0 +1,91 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{tex/csmi}
+
+\input{tex/listing.style}
+\input{tex/algorithm.style}
+
+\lstdefinestyle{mycppstyleInTabular}{
+  style=mycppstyle,numbers=none,basicstyle=\footnotesize\ttfamily,
+  xleftmargin=0pt,mathescape=true
+}
+\newtcblisting{mycpplistingInTabular}[2][]{
+  enhanced,sharp corners,listing only,
+  colback=CSMILight,colframe=CSMIRule,boxrule=0.4pt,
+  colbacktitle=CSMINavy,coltitle=white,fonttitle=\small\sffamily\bfseries,
+  left=7pt,right=7pt,top=6pt,bottom=6pt,
+  listing style=mycppstyleInTabular,title={#2},#1
+}
+
+\renewcommand{\paragraph}[1]{%
+  \par\addvspace{2.5ex plus 1ex minus .2ex}%
+  {\normalfont\normalsize\bfseries #1}\par
+  \addvspace{1.3ex plus .2ex}%
+}
+\renewcommand{\CSMIdoctype}{RAPPORT DM}
+\renewcommand{\CSMIshorttitle}{Sujet 3 / Rapport}
+\renewcommand{\CSMIsubtitle}{Calcul scientifique 2}
+\renewcommand{\CSMIcovernote}{Rapport sur le sujet 3 : Pourquoi la cuillère en métal devient-elle chaude au manche dans la soupe, alors que la cuillère en bois ne le devient pas ?}
+\newcommand{\dollar}{\mbox{\textdollar}}
+\renewcommand{\familydefault}{\sfdefault}
+
+\title{Devoir maison :\\Diffusion de la chaleur dans une cuillère}
+\author{Pauline Wierzbicki / M1 CSMI}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\clearpage
+
+\section{Introduction}
+\label{sec:introduction}
+% Présentation du sujet, de la problématique et des objectifs.
+\subsection{Mise en situation}
+Ce devoir maison trouve sa motivation dans une observation quotidienne : 
+lorsque l'on plonge une cuillère dans une soupe chaude, sa température varie selon le matériau qui la compose.
+Avec une cuillère en métal, la chaleur de la soupe se propage rapidement le long du manche, le rendant brûlant au toucher.
+À l'inverse, une cuillère en bois reste tempérée à l'extrémité.
+
+Dès lors, comment expliquer physiquement cette différence de comportement ?
+C'est tout l'objet de ce travail, qui vise à modéliser et quantifier ce transfert thermique par une implémentation en Python.
+
+\subsection{Objectifs}
+Les objectifs de ce devoir maison sont :
+
+\begin{itemize}
+  \item Modéliser le problème de la cuillère par l'équation de la chaleur en une dimension d'espace et de temps
+  \item Implémenter cette modélisation en Python, en utilisant un stockage creux de matrices
+  \item Utiliser plusieurs méthodes de résolution (directes, itératives) et vérifier la convergence des méthodes itératives
+  \item Afficher des résultats sous forme graphique et les expliquer
+  \item Comparer les résultats obtenus en modélisant une cuillère en métal, et une cuillère en bois
+\end{itemize}
+
+\section{Formulation du problème}
+\label{sec:mathematical_formulation}
+% Équation de la chaleur 1D, paramètres physiques (diffusivité du métal et du bois), conditions initiales et aux limites.
+
+\section{Implémentation Python}
+\label{sec:cpp_implementation}
+% Discrétisation, schémas explicite/implicite, stockage CSR, solveurs (LU, Jacobi, Gauss-Seidel).
+
+\section{Résultats numériques}
+\label{sec:numerical_results}
+% Profils de température, comparaison des performances des solveurs, analyse de sensibilité.
+
+\section{Reproductibilité}
+% Commandes de reproduction, endroit où retrouver le code source, dépendances Python
+
+\section{Déclaration d'assistance par IA}
+Dans le cadre de ce devoir, je déclare avoir eu recours à une assistance par IA
+pour reformuler certains passages dans un registre plus formel.
+J'ai également utilisé ces outils pour identifier des sources documentaires
+sur la diffusivité des matériaux, afin d'obtenir une modélisation
+aussi fidèle que possible au comportement réel.
+
+\section{Conclusion}
+\label{sec:conclusion}
+% Bilan, limites et perspectives.
+
+\end{document}
